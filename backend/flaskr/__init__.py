@@ -8,9 +8,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import random
 from sqlalchemy.orm import load_only
-
 from sqlalchemy import select
-
 from models import setup_db, Question, Category, db
 
 QUESTIONS_PER_PAGE = 10
@@ -20,10 +18,8 @@ def paginate_results(request, results):
     page_num = request.args.get("page", 1, type=int)
     start_idx = (page_num - 1) * QUESTIONS_PER_PAGE
     end_idx = start_idx + QUESTIONS_PER_PAGE
-
     items = [result.format() for result in results]
     paginated_items = items[start_idx:end_idx]
-
     return paginated_items
 
 
