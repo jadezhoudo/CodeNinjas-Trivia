@@ -121,7 +121,7 @@ class TriviaTestCase(unittest.TestCase):
 
     def test_play_quiz_success(self):
         self.new_quiz = {
-            'quiz_category': 1,
+            'quiz_category': {'type': 'choose', 'id': 0},
             'previous_questions': [],
             'id': 1
         }

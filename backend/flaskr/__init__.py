@@ -26,16 +26,18 @@ def paginate_results(request, results):
 def create_app(test_config=None):
     app = Flask(__name__)
     with app.app_context():
-        setup_db(app, test_config)
+        setup_db(app)
         CORS(app, resources={r"/api/*": {"origins": "*"}})
 
         @app.after_request
         def after_request(response):
             response.headers.add(
-                "Access-Control-Allow-Headers", "Content-Type,Authorization,true"
+                "Access-Control-Allow-Headers",
+                "Content-Type,Authorization,true"
             )
             response.headers.add(
-                "Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS"
+                "Access-Control-Allow-Methods",
+                "GET,PUT,POST,DELETE,OPTIONS"
             )
             response.headers.add(
                 "Access-Control-Allow-Origin", "*"
@@ -58,14 +60,16 @@ def create_app(test_config=None):
         @app.route('/questions')
         def fetch_questions():
             selection = db.session.query(Question).options(
-                load_only(Question.question, Question.category)).order_by(Question.id)
+                load_only(Question.question, Question.category))\
+                .order_by(Question.id)
             categories = Category.query.all()
             questions = paginate_results(request, selection)
             if not questions:
                 abort(404)
 
             total_questions = Question.query.count()
-            total_categories = {item.id: item.type for item in categories}
+            total_categories = \
+                {item.id: item.type for item in categories}
             return jsonify({
                 "success": True,
                 "questions": questions,
@@ -92,7 +96,8 @@ def create_app(test_config=None):
         def post_question():
             data = request.get_json()
 
-            if not all(key in data for key in ('question', 'answer', 'category', 'difficulty')):
+            if not all(key in data for key in
+                       ('question', 'answer', 'category', 'difficulty')):
                 abort(422)
 
             try:
@@ -146,7 +151,8 @@ def create_app(test_config=None):
                     "success": True,
                     "questions": list(paginated_questions),
                     "total_questions": len(questions),
-                    "current_category": [cat.type for cat in categories if cat.id == category_id]
+                    "current_category":
+                    [cat.type for cat in categories if cat.id == category_id]
                 })
             except:
                 abort(404)
@@ -154,23 +160,22 @@ def create_app(test_config=None):
         @app.route('/quizzes', methods=['POST'])
         def start_quiz():
             try:
-                request_body = request.get_json()
-                previous_questions = request_body.get('previous_questions')
-                category_id = request_body.get('id')
-                if category_id == 0:
+                body_quiz = request.get_json()
+                category = body_quiz.get('quiz_category')
+                previous_question = body_quiz.get('previous_questions')
+                if category['type'] == 'choose':
                     available_questions = Question.query.filter(
-                        Question.id.notin_((previous_questions))).all()
+                        Question.id.notin_((previous_question))).all()
                 else:
-                    available_questions =\
-                        Question.query.filter(Question.id.notin_(previous_questions),
-                                              Question.category == category_id).all()
-                next_question = None
-                if (available_questions):
-                    next_question = random.choice(available_questions)
-
+                    available_questions = Question.query.filter_by(
+                        category=category['id'])\
+                        .filter(Question.id.notin_((previous_question))).all()
+                questions_new = available_questions[random.randrange(
+                    0, len(available_questions))]\
+                    .format() if len(available_questions) > 0 else None
                 return jsonify({
                     'success': True,
-                    'question': next_question.format()
+                    'question': questions_new
                 })
             except:
                 abort(422)
