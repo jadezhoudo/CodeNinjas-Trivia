@@ -62,6 +62,10 @@ class Category(db.Model):
     def __init__(self, type):
         self.type = type
 
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
+
     def format(self):
         return {
             'id': self.id,

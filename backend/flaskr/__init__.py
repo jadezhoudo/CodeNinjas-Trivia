@@ -116,19 +116,19 @@ def create_app(test_config=None):
             except:
                 abort(422)
 
-        @app.route('/questions/search')
+        @app.route('/questions/search',  methods=['POST'])
         def find_questions():
-            termSearch = request.args.get('search')
+            term_search = request.get_json().get("search")
             select = Question.query.filter(
-                Question.question.ilike(f'%{termSearch}%')).all()
-            searchQuestions = paginate_results(request, select)
+                Question.question.ilike(f'%{term_search}%')).all()
+            search_questions = paginate_results(request, select)
 
-            if termSearch == None:
+            if len(select) == 0:
                 abort(404)
 
             return jsonify({
                 "success": True,
-                "questions": list(searchQuestions),
+                "questions": list(search_questions),
                 "total_questions": len(select),
             })
 
@@ -155,16 +155,15 @@ def create_app(test_config=None):
         def start_quiz():
             try:
                 request_body = request.get_json()
-                quiz_category = request_body.get('quiz_category')
                 previous_questions = request_body.get('previous_questions')
-                category_id = quiz_category['id']
-
+                category_id = request_body.get('id')
                 if category_id == 0:
-                    Question.query.filter(
+                    available_questions = Question.query.filter(
                         Question.id.notin_((previous_questions))).all()
                 else:
-                    available_questions = Question.query.filter(Question.id.notin_(previous_questions),
-                                                                Question.category == category_id).all()
+                    available_questions =\
+                        Question.query.filter(Question.id.notin_(previous_questions),
+                                              Question.category == category_id).all()
                 next_question = None
                 if (available_questions):
                     next_question = random.choice(available_questions)
