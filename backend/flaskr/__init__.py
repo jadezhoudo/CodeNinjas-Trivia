@@ -123,19 +123,21 @@ def create_app(test_config=None):
 
         @app.route('/questions/search',  methods=['POST'])
         def find_questions():
-            term_search = request.get_json().get("search")
-            select = Question.query.filter(
-                Question.question.ilike(f'%{term_search}%')).all()
-            search_questions = paginate_results(request, select)
-
-            if len(select) == 0:
-                abort(404)
-
-            return jsonify({
-                "success": True,
-                "questions": list(search_questions),
-                "total_questions": len(select),
-            })
+            body = request.get_json()
+            search_term = body.get('searchTerm', None)
+            if search_term:
+                questions_search = Question.query.filter(
+                    Question.question.ilike(f'%{search_term}%')).all()
+                formatted_questions = [question.format()
+                                       for question in questions_search]
+                return jsonify({
+                    'questions': formatted_questions,
+                    'total_questions': len(formatted_questions),
+                    'current_category': None,
+                    'success': True
+                })
+            else:
+                abort(400)
 
         @app.route('/categories/<int:category_id>/questions')
         def get_questions_by_category(category_id):
@@ -159,26 +161,30 @@ def create_app(test_config=None):
 
         @app.route('/quizzes', methods=['POST'])
         def start_quiz():
-            try:
-                body_quiz = request.get_json()
-                category = body_quiz.get('quiz_category')
-                previous_question = body_quiz.get('previous_questions')
-                if category['type'] == 'choose':
-                    available_questions = Question.query.filter(
-                        Question.id.notin_((previous_question))).all()
-                else:
-                    available_questions = Question.query.filter_by(
-                        category=category['id'])\
-                        .filter(Question.id.notin_((previous_question))).all()
-                questions_new = available_questions[random.randrange(
-                    0, len(available_questions))]\
-                    .format() if len(available_questions) > 0 else None
-                return jsonify({
-                    'success': True,
-                    'question': questions_new
-                })
-            except:
-                abort(422)
+            body = request.get_json()
+            quiz_category = body.get('quiz_category')
+            previous_questions = body.get('previous_questions')
+            question = auto_random_question(
+                quiz_category['id'], previous_questions)
+            if question is None:
+                abort(404)
+            return jsonify({
+                'question': question.format(),
+                'success': True,
+            })
+
+        def auto_random_question(category, previous_questions):
+            if category == 0:
+                questions = Question.query.filter(
+                    Question.id.notin_((previous_questions))).all()
+            else:
+                questions = Question.query.filter_by(
+                    category=category).filter(
+                    Question.id.notin_((previous_questions))).all()
+            if len(questions) == 0:
+                return None
+            else:
+                return questions[random.randrange(0, len(questions))]
 
         @app.errorhandler(400)
         def handle_bad_request_error(error):

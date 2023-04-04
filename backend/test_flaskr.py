@@ -78,21 +78,24 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data['message'], 'method not allowed !')
 
     def test_get_question_search_with_results(self):
-        res = self.client().post('/questions/search', json={"search": "What"})
-        data = json.loads(res.data)
-
-        self.assertEqual(res.status_code, 200)
-        self.assertEqual(data['success'], True)
-        self.assertTrue(data['questions'])
-        self.assertTrue(data['total_questions'])
+        with self.app.app_context():
+            res = self.client().post('/questions/search',
+                                     json={"searchTerm": "What"})
+            data = json.loads(res.data)
+            self.assertEqual(res.status_code, 200)
+            self.assertEqual(data['success'], True)
+            self.assertTrue(data['questions'], 0)
+            self.assertTrue(data['total_questions'], 0)
 
     def test_404_get_search_unavailable_question(self):
-        response = self.client().post(
-            '/questions/search', json={"search": "rehjtjuk"})
-        self.assertEqual(response.status_code, 404)
-        data = json.loads(response.data)
-        self.assertEqual(data['success'], False)
-        self.assertEqual(data['message'], 'resource not found !')
+        with self.app.app_context():
+            res = self.client().post('/questions/search',
+                                     json={'searchTerm': 'qưeqfw3'})
+            data = json.loads(res.data)
+            self.assertEqual(res.status_code, 200)
+            self.assertEqual(data['success'], True)
+            self.assertEqual(data['total_questions'], 0)
+            self.assertEqual(len(data['questions']), 0)
 
     def test_get_categories(self):
         res = self.client().get('/categories')
@@ -133,17 +136,17 @@ class TriviaTestCase(unittest.TestCase):
         self.assertTrue(data['question'])
 
     def test_play_quiz_failure(self):
-        self.new_quiz = {
-            'previous_questions': [],
-            'id': None
-        }
-        response = self.client().post(
-            '/quizzes', json=self.new_quiz)
-        data = json.loads(response.data)
-        self.assertEqual(response.status_code, 422)
-        self.assertEqual(data['success'], False)
-        self.assertEqual(data['message'], 'request cannot be processed !')
+        with self.app.app_context():
+            Question.query.delete()
+            res = self.client().post('/quizzes', json={
+                'quiz_category': {
+                    'id': '678',
+                    'type': 'Sports'
+                },
+                'previous_questions': [],
+            })
 
+            self.assertEqual(res.status_code, 404)
 
         # Make the tests conveniently executable
 if __name__ == "__main__":
